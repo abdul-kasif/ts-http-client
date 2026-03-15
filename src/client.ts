@@ -1,9 +1,20 @@
 import fetch, { RequestInit as NodeRequestInit } from "node-fetch";
 import { HttpClientRequestConfig, HttpClientResponse } from "./types";
 
+type RequestInterceptor = (
+  config: HttpClientRequestConfig,
+) => HttpClientRequestConfig | Promise<HttpClientRequestConfig>;
+
+type ResponseInterceptor<T = any> = (
+  reponse: HttpClientResponse<T>,
+) => HttpClientResponse | Promise<HttpClientResponse>;
+
 export class HttpClient {
   private baseURL: string;
   private defaultHeaders: Record<string, string>;
+
+  private requestInterceptors: RequestInterceptor[] = [];
+  private responseInterceptors: ResponseInterceptor[] = [];
 
   constructor(baseURL: string, defaultHeaders: Record<string, string> = {}) {
     this.baseURL = baseURL;
@@ -26,11 +37,30 @@ export class HttpClient {
 
     return url.toString();
   }
+  public interceptor = {
+    request: {
+      use: (fn: RequestInterceptor) => {
+        this.requestInterceptors.push(fn);
+      },
+    },
+
+    response: {
+      use: <T = any>(fn: ResponseInterceptor<T>) => {
+        this.responseInterceptors.push(fn as ResponseInterceptor);
+      },
+    },
+  };
 
   async request<T = any, D = any>(
     config: HttpClientRequestConfig<D>,
   ): Promise<HttpClientResponse<T>> {
-    const { url, method = "GET", headers, params, data } = config;
+    let currentConfig: HttpClientRequestConfig<D> = { ...config };
+
+    for (const interceptor of this.requestInterceptors) {
+      currentConfig = await interceptor(currentConfig);
+    }
+
+    const { url, method = "GET", headers, params, data } = currentConfig;
 
     const fullURL = this.buildURL(url, params);
 
@@ -54,13 +84,20 @@ export class HttpClient {
 
     const responseData = await response.json();
 
-    return {
+    let currentResponse: HttpClientResponse<T> = {
       data: responseData as T,
       status: response.status,
       statusText: response.statusText,
       headers: Object.fromEntries(response.headers.entries()),
       config,
     };
+
+    for (const interceptor of this.responseInterceptors) {
+      currentResponse = await (interceptor as ResponseInterceptor<T>)(
+        currentResponse,
+      );
+    }
+    return currentResponse;
   }
 
   get<T = any>(
