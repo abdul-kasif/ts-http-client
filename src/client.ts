@@ -1,5 +1,5 @@
 import fetch, { RequestInit as NodeRequestInit } from "node-fetch";
-import { HttpClientRequestConfig, HttpResponseConfig } from "./types";
+import { HttpClientRequestConfig, HttpClientResponse } from "./types";
 
 export class HttpClient {
   private baseURL: string;
@@ -29,7 +29,7 @@ export class HttpClient {
 
   async request<T = any, D = any>(
     config: HttpClientRequestConfig<D>,
-  ): Promise<HttpResponseConfig<T>> {
+  ): Promise<HttpClientResponse<T>> {
     const { url, method = "GET", headers, params, data } = config;
 
     const fullURL = this.buildURL(url, params);
@@ -41,7 +41,7 @@ export class HttpClient {
         ...headers,
       },
       body:
-        method === "GET" || method === "HEAD"
+        method === "GET" || method === "DELETE"
           ? undefined
           : JSON.stringify(data),
     };
@@ -61,5 +61,66 @@ export class HttpClient {
       headers: Object.fromEntries(response.headers.entries()),
       config,
     };
+  }
+
+  get<T = any>(
+    url: string,
+    config?: Omit<HttpClientRequestConfig, "url" | "method" | "data">,
+  ): Promise<HttpClientResponse<T>> {
+    return this.request<T>({
+      url,
+      method: "GET",
+      ...config,
+    });
+  }
+
+  post<T = any, D = any>(
+    url: string,
+    data?: D,
+    config?: Omit<HttpClientRequestConfig, "url" | "method" | "data">,
+  ): Promise<HttpClientResponse<T>> {
+    return this.request<T, D>({
+      url,
+      method: "POST",
+      data,
+      ...config,
+    });
+  }
+
+  put<T = any, D = any>(
+    url: string,
+    data?: D,
+    config?: Omit<HttpClientRequestConfig, "url" | "method" | "data">,
+  ): Promise<HttpClientResponse<T>> {
+    return this.request<T, D>({
+      url,
+      method: "PUT",
+      data,
+      ...config,
+    });
+  }
+
+  patch<T = any, D = any>(
+    url: string,
+    data?: D,
+    config?: Omit<HttpClientRequestConfig, "url" | "method" | "data">,
+  ): Promise<HttpClientResponse<T>> {
+    return this.request<T, D>({
+      url,
+      method: "PATCH",
+      data,
+      ...config,
+    });
+  }
+
+  delete<T = any>(
+    url: string,
+    config?: Omit<HttpClientRequestConfig, "url" | "method" | "data">,
+  ): Promise<HttpClientResponse<T>> {
+    return this.request<T>({
+      url,
+      method: "GET",
+      ...config,
+    });
   }
 }

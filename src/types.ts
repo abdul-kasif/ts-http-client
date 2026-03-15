@@ -9,7 +9,7 @@ export interface HttpRequestConfig {
   timeout?: number;
 }
 
-export interface HttpResponseConfig<T = any> {
+export interface HttpClientResponse<T = any> {
   data: T;
   status: number;
   statusText: string;
