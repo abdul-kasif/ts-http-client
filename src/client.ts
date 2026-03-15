@@ -1,5 +1,6 @@
 import fetch, { RequestInit as NodeRequestInit } from "node-fetch";
 import { HttpClientRequestConfig, HttpClientResponse } from "./types";
+import { HttpError } from "./error";
 
 type RequestInterceptor = (
   config: HttpClientRequestConfig,
@@ -79,7 +80,20 @@ export class HttpClient {
     const response = await fetch(fullURL, fetchOptions);
 
     if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+      let errorData: any = {};
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = { message: response.statusText };
+      }
+
+      throw new HttpError(
+        `HTTP Error: ${response.status} ${response.statusText}`,
+        response.status,
+        response.statusText,
+        errorData,
+        currentConfig,
+      );
     }
 
     const responseData = await response.json();

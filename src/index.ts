@@ -2,6 +2,8 @@ import { HttpClient } from "./client";
 
 export { HttpClient } from "./client";
 
+export { HttpError } from "./error";
+
 export {
   HttpMethod,
   HttpRequestConfig,
