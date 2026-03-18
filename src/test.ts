@@ -1,4 +1,4 @@
-import { createHttpClient, HttpError } from "./index";
+import { createHttpClient, NotFoundError } from "./index";
 
 interface User {
   id: number;
@@ -62,7 +62,7 @@ async function main() {
     try {
       await api.get("/invalid-route-that-does-not-exist");
     } catch (error) {
-      if (error instanceof HttpError) {
+      if (error instanceof NotFoundError) {
         console.log(`Caught HttpError: ${error.status} ${error.statusText}`);
         console.log("Error Data:", error.data);
       } else {

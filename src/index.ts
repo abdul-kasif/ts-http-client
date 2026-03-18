@@ -2,7 +2,14 @@ import { HttpClient } from "./client";
 
 export { HttpClient } from "./client";
 
-export { HttpError } from "./error";
+export {
+  createHttpError,
+  HttpError,
+  NotFoundError,
+  BaseHttpError,
+  ServerError,
+  UnauthorizedError,
+} from "./errors";
 
 export {
   HttpMethod,

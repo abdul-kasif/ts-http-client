@@ -1,6 +1,6 @@
 import fetch, { RequestInit as NodeRequestInit } from "node-fetch";
 import { HttpClientRequestConfig, HttpClientResponse } from "./types";
-import { HttpError } from "./error";
+import { createHttpError } from "./errors";
 
 type RequestInterceptor = (
   config: HttpClientRequestConfig,
@@ -86,11 +86,10 @@ export class HttpClient {
       } catch (e) {
         errorData = { message: response.statusText };
       }
-
-      throw new HttpError(
-        `HTTP Error: ${response.status} ${response.statusText}`,
+      throw createHttpError(
         response.status,
         response.statusText,
+        `HttpError ${response.status}`,
         errorData,
         currentConfig,
       );
