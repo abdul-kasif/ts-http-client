@@ -1,6 +1,5 @@
-import fetch, { RequestInit as NodeRequestInit } from "node-fetch";
 import { HttpClientRequestConfig, HttpClientResponse } from "./types";
-import { createHttpError } from "./errors";
+import { RequestBuilder } from "./builder";
 
 type RequestInterceptor = (
   config: HttpClientRequestConfig,
@@ -25,19 +24,6 @@ export class HttpClient {
     };
   }
 
-  private buildURL(endpoint: string, params?: Record<string, any>): string {
-    const url = new URL(endpoint, this.baseURL);
-
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value != null && value != undefined) {
-          url.searchParams.append(key, String(value));
-        }
-      });
-    }
-
-    return url.toString();
-  }
   public interceptor = {
     request: {
       use: (fn: RequestInterceptor) => {
@@ -52,125 +38,70 @@ export class HttpClient {
     },
   };
 
-  async request<T = any, D = any>(
-    config: HttpClientRequestConfig<D>,
-  ): Promise<HttpClientResponse<T>> {
-    let currentConfig: HttpClientRequestConfig<D> = { ...config };
+  get<T = any>(url: string): RequestBuilder<T> {
+    return new RequestBuilder<T>(
+      url,
+      "GET",
+      this.baseURL,
+      this.defaultHeaders,
+      this.requestInterceptors,
+      this.responseInterceptors,
+    );
+  }
 
-    for (const interceptor of this.requestInterceptors) {
-      currentConfig = await interceptor(currentConfig);
+  post<T = any, D = any>(url: string, data?: D): RequestBuilder<T, D> {
+    const builder = new RequestBuilder<T, D>(
+      url,
+      "POST",
+      this.baseURL,
+      this.defaultHeaders,
+      this.requestInterceptors,
+      this.responseInterceptors,
+    );
+    if (data !== undefined) {
+      (builder as any).config.data = data;
     }
+    return builder;
+  }
 
-    const { url, method = "GET", headers, params, data } = currentConfig;
-
-    const fullURL = this.buildURL(url, params);
-
-    const fetchOptions: NodeRequestInit = {
-      method,
-      headers: {
-        ...this.defaultHeaders,
-        ...headers,
-      },
-      body:
-        method === "GET" || method === "DELETE"
-          ? undefined
-          : JSON.stringify(data),
-    };
-
-    const response = await fetch(fullURL, fetchOptions);
-
-    if (!response.ok) {
-      let errorData: any = {};
-      try {
-        errorData = await response.json();
-      } catch (e) {
-        errorData = { message: response.statusText };
-      }
-      throw createHttpError(
-        response.status,
-        response.statusText,
-        `HttpError ${response.status}`,
-        errorData,
-        currentConfig,
-      );
+  put<T = any, D = any>(url: string, data?: D): RequestBuilder<T, D> {
+    const builder = new RequestBuilder<T, D>(
+      url,
+      "PUT",
+      this.baseURL,
+      this.defaultHeaders,
+      this.requestInterceptors,
+      this.responseInterceptors,
+    );
+    if (data !== undefined) {
+      (builder as any).config.data = data;
     }
+    return builder;
+  }
 
-    const responseData = await response.json();
-
-    let currentResponse: HttpClientResponse<T> = {
-      data: responseData as T,
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries()),
-      config,
-    };
-
-    for (const interceptor of this.responseInterceptors) {
-      currentResponse = await (interceptor as ResponseInterceptor<T>)(
-        currentResponse,
-      );
+  patch<T = any, D = any>(url: string, data?: D): RequestBuilder<T, D> {
+    const builder = new RequestBuilder<T, D>(
+      url,
+      "PATCH",
+      this.baseURL,
+      this.defaultHeaders,
+      this.requestInterceptors,
+      this.responseInterceptors,
+    );
+    if (data !== undefined) {
+      (builder as any).config.data = data;
     }
-    return currentResponse;
+    return builder;
   }
 
-  get<T = any>(
-    url: string,
-    config?: Omit<HttpClientRequestConfig, "url" | "method" | "data">,
-  ): Promise<HttpClientResponse<T>> {
-    return this.request<T>({
+  delete<T = any>(url: string): RequestBuilder<T> {
+    return new RequestBuilder<T>(
       url,
-      method: "GET",
-      ...config,
-    });
-  }
-
-  post<T = any, D = any>(
-    url: string,
-    data?: D,
-    config?: Omit<HttpClientRequestConfig, "url" | "method" | "data">,
-  ): Promise<HttpClientResponse<T>> {
-    return this.request<T, D>({
-      url,
-      method: "POST",
-      data,
-      ...config,
-    });
-  }
-
-  put<T = any, D = any>(
-    url: string,
-    data?: D,
-    config?: Omit<HttpClientRequestConfig, "url" | "method" | "data">,
-  ): Promise<HttpClientResponse<T>> {
-    return this.request<T, D>({
-      url,
-      method: "PUT",
-      data,
-      ...config,
-    });
-  }
-
-  patch<T = any, D = any>(
-    url: string,
-    data?: D,
-    config?: Omit<HttpClientRequestConfig, "url" | "method" | "data">,
-  ): Promise<HttpClientResponse<T>> {
-    return this.request<T, D>({
-      url,
-      method: "PATCH",
-      data,
-      ...config,
-    });
-  }
-
-  delete<T = any>(
-    url: string,
-    config?: Omit<HttpClientRequestConfig, "url" | "method" | "data">,
-  ): Promise<HttpClientResponse<T>> {
-    return this.request<T>({
-      url,
-      method: "GET",
-      ...config,
-    });
+      "DELETE",
+      this.baseURL,
+      this.defaultHeaders,
+      this.requestInterceptors,
+      this.responseInterceptors,
+    );
   }
 }

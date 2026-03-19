@@ -1,76 +1,43 @@
-import { createHttpClient, NotFoundError } from "./index";
+// src/example.ts
+import { createHttpClient } from "./index";
 
 interface User {
   id: number;
   name: string;
-  username: string;
-  email: string;
-}
-
-interface Post {
-  userId: number;
-  id: number;
-  title: string;
-  body: string;
 }
 
 const api = createHttpClient("https://jsonplaceholder.typicode.com");
 
-api.interceptor.request.use((config) => {
-  console.log(`[Request] ${config.method} ${config.url}`);
-  // Simulate adding an Auth Token
-  config.headers = {
-    ...config.headers,
-    Authorization: "Bearer secret-token-123",
-  };
-  return config;
-});
-
-api.interceptor.response.use((response) => {
-  console.log(`[Response] ${response.status} ${response.statusText}`);
-  return response;
-});
-
-async function main() {
-  console.log("--- Starting HTTP Client Demo ---\n");
+async function run() {
+  console.log("--- Testing Fluent Interface ---");
 
   try {
-    console.log("1. Fetching Users...");
-    const userResponse = await api.get<User[]>("/users");
+    // SCENARIO 1: Simple Await (Backwards compatible feel)
+    // Because we implemented .then(), this works exactly like before!
+    console.log("1. Simple Await:");
+    const res1 = await api.get<User[]>("/users");
+    console.log(`Fetched ${res1.data.length} users.`);
 
-    console.log("First User:", userResponse.data[0].name);
-    console.log("Email:", userResponse.data[0].email);
-    console.log("");
+    // SCENARIO 2: The New Fluent Chain!
+    console.log("\n2. Fluent Retry Chain:");
+    const res2 = await api
+      .get<User[]>("/users")
+      .retry(3, 500) // Retry 3 times, 500ms base delay
+      .setHeaders({
+        "X-Custome": "MyValue",
+      })
+      .query({ page: 1 }); // Add query params
 
-    console.log("2. Creating a Post...");
-    const newPostPayload = {
-      title: "My New Post",
-      body: "This is the content of my post.",
-      userId: 1,
-    };
+    console.log(`Fetched with retries enabled. Status: ${res2.status}`);
 
-    const postResponse = await api.post<Post, typeof newPostPayload>(
-      "/posts",
-      newPostPayload,
-    );
+    // SCENARIO 3: Explicit .send() (Optional)
+    console.log("\n3. Explicit .send():");
+    const res3 = await api.get<User[]>("/posts").retry(2, 200).send(); // Explicitly call send
 
-    console.log("Created Post ID:", postResponse.data.id);
-    console.log("Created Post Title:", postResponse.data.title);
-    console.log("");
-
-    console.log("3. Triggering a 404 Error...");
-    try {
-      await api.get("/invalid-route-that-does-not-exist");
-    } catch (error) {
-      if (error instanceof NotFoundError) {
-        console.log(`Caught HttpError: ${error.status} ${error.statusText}`);
-        console.log("Error Data:", error.data);
-      } else {
-        console.log("Unknown Error:", error);
-      }
-    }
+    console.log(`Fetched posts. Count: ${res3.data.length}`);
   } catch (error) {
-    console.error("Global Error:", error);
+    console.error("Error:", error);
   }
 }
-main();
+
+run();
