@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsc --watch",
-    "build": "tsc"
+    "build": "tsc",
+    "clean": "rm -rf ./dist",
+    "test": "node dist/test.js"
   },
   "keywords": [],
   "author": "",
